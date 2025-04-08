@@ -84,7 +84,7 @@ def plot_gpx_to_image(folder_path, output_filename='output.png', resolution=(512
     # ax.invert_yaxis()  # To match typical latitude/longitude plotting
     
     # Save the figure directly to a file
-    fig.savefig(output_filename, format='png')
+    fig.savefig(output_filename, format='png', bbox_inches='tight', pad_inches=0.1)
     plt.close(fig)  # Close the figure to free memory
     
     print(f"Image saved as {output_filename}")
