@@ -11,8 +11,8 @@ Python tool to render GPX traces and maps.
 ----
 
 <figure>
-  <img src="germany+.png" alt="Screenshot of possible output, Germany and surrounds">
-  <figcaption>Screenshot of possible output, Germany and surrounds</figcaption>
+  <img src="germany+.png" alt="Screenshot of possible output, Germany and surrounds. Administrative boundaries, which is why the coastline looks wrong.">
+  <figcaption>Screenshot of possible output, Germany and surrounds. Administrative boundaries, which is why the coastline looks wrong.</figcaption>
 </figure>
 
 ----
