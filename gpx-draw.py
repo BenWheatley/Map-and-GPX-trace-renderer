@@ -76,7 +76,7 @@ def draw_geojson(ax, filepath, fill_color="#00000044", line_color="#00000088"):
         
         if t == 'LineString':
             lons, lats = zip(*coords)
-            ax.plot(lons, lats, color=rgba(color), linewidth=1, zorder=1)
+            ax.plot(lons, lats, color=rgba(line_color), linewidth=1, zorder=1)
         
         elif t == 'Polygon':
             for ring in coords:
@@ -132,11 +132,12 @@ def autoscale_resolution_from_bbox(bbox, target_height):
     """Compute resolution from bbox and target height using average latitude."""
     if not bbox or len(bbox) != 4:
         raise ValueError("Bounding box must be provided with four values: min_lon, max_lon, min_lat, max_lat.")
-    min_lat, max_lat = bbox[2], bbox[3]
-    avg_lat = (min_lat + max_lat) / 2.0
-    scale_factor = math.cos(math.radians(avg_lat))
-    width = int(target_height * scale_factor)
-    return (target_height, width)
+    lat_range = bbox[3] - bbox[2]
+    lon_range = bbox[1] - bbox[0]
+    scale_factor = math.cos(math.radians((bbox[2] + bbox[3]) / 2))
+    aspect_ratio = (lon_range * scale_factor) / lat_range
+    width = int(target_height * aspect_ratio)
+    return (width, target_height)
 
 if __name__ == "__main__":
     import argparse
