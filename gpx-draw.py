@@ -8,6 +8,9 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import xml.etree.ElementTree as ET
 import math
 from datetime import datetime
+import json
+from matplotlib.patches import Polygon as MplPolygon
+import matplotlib.colors as mcolors
 
 def parse_gpx(file_path):
     """Parse GPX file and return list of (lat, lon, time) tuples."""
@@ -58,10 +61,47 @@ def exceeds_speed_threshold(points, max_kph):
             return True
     return False
 
-def plot_gpx_to_image(folder_path, output_filename='output.png', resolution=(512, 512), bbox=None, max_speed=None):
+def draw_geojson(ax, filepath, fill_color="#00000044", line_color="#00000088"):
+    """Load a GeoJSON file and draw its geometries on the given matplotlib axes."""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    def rgba(c):
+        return mcolors.to_rgba(c)
+    
+    for feature in data.get('features', []):
+        geom = feature.get('geometry', {})
+        coords = geom.get('coordinates', [])
+        t = geom.get('type')
+        
+        if t == 'LineString':
+            lons, lats = zip(*coords)
+            ax.plot(lons, lats, color=rgba(color), linewidth=1, zorder=1)
+        
+        elif t == 'Polygon':
+            for ring in coords:
+                lons, lats = zip(*ring)
+                ax.add_patch(MplPolygon(list(zip(lons, lats)), closed=True, facecolor=rgba(fill_color), edgecolor=rgba(line_color), linewidth=0.5, zorder=1))
+        
+        elif t == 'MultiPolygon':
+            for polygon in coords:
+                for ring in polygon:
+                    lons, lats = zip(*ring)
+                    ax.add_patch(MplPolygon(list(zip(lons, lats)), closed=True, facecolor=rgba(fill_color), edgecolor=rgba(line_color), linewidth=0.5, zorder=1))
+
+def plot_gpx_to_image(folder_path, output_filename='output.png', resolution=(512, 512), bbox=None, max_speed=None, geojson_overlays=None):
     """Plot GPX paths from the folder onto an image."""
     fig, ax = plt.subplots(figsize=(resolution[0] / 100, resolution[1] / 100), dpi=100)
     ax.set_facecolor('white')
+    
+    if geojson_overlays:
+        for path_and_color in geojson_overlays:
+            if len(path_and_color) == 1:
+                draw_geojson(ax, path_and_color[0])
+            elif len(path_and_color) == 2:
+                draw_geojson(ax, path_and_color[0], path_and_color[1])
+            else:
+                draw_geojson(ax, path_and_color[0], path_and_color[1], path_and_color[2])
     
     for filename in os.listdir(folder_path):
         if filename.endswith('.gpx'):
@@ -71,7 +111,7 @@ def plot_gpx_to_image(folder_path, output_filename='output.png', resolution=(512
                 print(f"Skipping {filename} (exceeds {max_speed} km/h)")
                 continue
             lats, lons = zip(*[(p[0], p[1]) for p in points])
-            ax.plot(lons, lats, 'k-', linewidth=0.5)  # Draw path with black lines
+            ax.plot(lons, lats, 'k-', linewidth=0.5, zorder=2)  # Draw path with black lines
     
     if bbox:
         ax.set_xlim(bbox[0], bbox[1])
@@ -81,7 +121,6 @@ def plot_gpx_to_image(folder_path, output_filename='output.png', resolution=(512
     
     ax.set_xlabel('Longitude')
     ax.set_ylabel('Latitude')
-    # ax.invert_yaxis()  # To match typical latitude/longitude plotting
     
     # Save the figure directly to a file
     fig.savefig(output_filename, format='png', bbox_inches='tight', pad_inches=0.1)
@@ -103,12 +142,15 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Plot GPX paths to an image.')
-    parser.add_argument('folder_path', type=str, help='Path to the folder containing GPX files.')
+    parser.add_argument('--source_folder', type=str, help='Path to the folder containing GPX files.')
     parser.add_argument('--output', type=str, default='output.png', help='Output image filename.')
     parser.add_argument('--resolution', type=int, nargs=2, default=[512, 512], help='Output image resolution (width height).')
     parser.add_argument('--bbox', type=float, nargs=4, help='Bounding box (min_lon, max_lon, min_lat, max_lat).')
     parser.add_argument('--autoscale', type=int, help='Target image height in pixels. Width is calculated by latitude. Requires --bbox.')
     parser.add_argument('--maxspeed', type=float, help='Exclude GPX tracks that exceed this speed (km/h).')
+    parser.add_argument('--geojson', nargs='+', action='append',
+                        metavar=('PATH [FILL [LINE]]'),
+                        help='Add a GeoJSON overlay with optional color (e.g. "#FF00FF88" (your shell may require the quotes)) for fill and line colours')
     
     args = parser.parse_args()
     
@@ -117,4 +159,4 @@ if __name__ == "__main__":
     elif args.resolution:
         resolution = tuple(args.resolution)
     
-    plot_gpx_to_image(args.folder_path, args.output, resolution, args.bbox, args.maxspeed)
+    plot_gpx_to_image(args.source_folder, args.output, resolution, args.bbox, args.maxspeed, args.geojson)
