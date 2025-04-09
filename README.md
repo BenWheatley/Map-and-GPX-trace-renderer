@@ -1,15 +1,21 @@
 # Map and GPX trace renderer
-Python tool to render GPX traces and maps
+Python tool to render GPX traces and maps.
+
+----
 
 <figure>
   <img src="berlin-brandenburg.png" alt="Screenshot of possible output, Berlin and Brandenburg">
   <figcaption>Screenshot of possible output, Berlin and Brandenburg</figcaption>
 </figure>
 
+----
+
 <figure>
   <img src="germany+.png" alt="Screenshot of possible output, Germany and surrounds">
   <figcaption>Screenshot of possible output, Germany and surrounds</figcaption>
 </figure>
+
+----
 
 <figure>
   <img src="eurovelo.png" alt="Screenshot of possible output, Cycling along the EuroVelo Rhine route">
