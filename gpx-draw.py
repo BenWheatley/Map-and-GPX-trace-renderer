@@ -11,6 +11,9 @@ from datetime import datetime
 import json
 from matplotlib.patches import Polygon as MplPolygon
 import matplotlib.colors as mcolors
+import logging
+
+logger = logging.getLogger(__name__)
 
 def parse_gpx(file_path):
     """Parse GPX file and return list of (lat, lon, time) tuples."""
@@ -131,7 +134,7 @@ def create_map(folder_path, output_filename, resolution, bbox=None, max_speed=No
             file_path = os.path.join(folder_path, filename)
             points = parse_gpx(file_path)
             if max_speed is not None and exceeds_speed_threshold(points, max_speed):
-                print(f"Skipping {filename} (exceeds {max_speed} km/h)")
+                logger.warning(f"Skipping {filename} (exceeds {max_speed} km/h)")
                 continue
             draw_gpx_points(points, axies)
     
@@ -139,7 +142,7 @@ def create_map(folder_path, output_filename, resolution, bbox=None, max_speed=No
     figure.savefig(output_filename, format='png', bbox_inches='tight', pad_inches=0.1)
     plt.close(figure)  # Close the figure to free memory
     
-    print(f"Image saved as {output_filename}")
+    logger.info(f"Image saved as {output_filename}")
 
 def autoscale_resolution_from_bbox(bbox, target_height):
     """Compute resolution from bbox and target height using average latitude."""
@@ -165,8 +168,12 @@ if __name__ == "__main__":
     parser.add_argument('--geojson', nargs='+', action='append',
                         metavar=('PATH [FILL [LINE]]'),
                         help='Add a GeoJSON overlay with optional color (e.g. "#FF00FF88" (your shell may require the quotes)) for fill and line colours')
+    parser.add_argument('--loglevel', default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                    help='Set the logging level')
     
     args = parser.parse_args()
+    
+    logging.basicConfig(level=getattr(logging, args.loglevel))
     
     if args.autoscale:
         resolution = autoscale_resolution_from_bbox(args.bbox, args.autoscale)
