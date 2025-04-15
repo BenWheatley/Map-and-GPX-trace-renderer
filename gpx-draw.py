@@ -121,7 +121,7 @@ def draw_gpx_points(points, axies):
     lats, lons = zip(*[(p[0], p[1]) for p in points])
     axies.plot(lons, lats, 'k-', linewidth=0.5, zorder=2)  # Draw path with black lines
 
-def create_map(folder_path, output_filename, resolution, bbox=None, max_speed=None, geojson=None):
+def create_map(source_folder, output_path, resolution, bbox=None, max_speed=None, geojson=None):
     """Plot GPX paths from the folder onto an image."""
     
     figure, axies = configure_plot(resolution=resolution, bbox=bbox)
@@ -129,9 +129,9 @@ def create_map(folder_path, output_filename, resolution, bbox=None, max_speed=No
     if geojson:
         draw_geojson_backgrounds(geojson, axies)
     
-    for filename in os.listdir(folder_path):
+    for filename in os.listdir(source_folder):
         if filename.endswith('.gpx'):
-            file_path = os.path.join(folder_path, filename)
+            file_path = os.path.join(source_folder, filename)
             points = parse_gpx(file_path)
             if max_speed is not None and exceeds_speed_threshold(points, max_speed):
                 logger.warning(f"Skipping {filename} (exceeds {max_speed} km/h)")
@@ -139,10 +139,10 @@ def create_map(folder_path, output_filename, resolution, bbox=None, max_speed=No
             draw_gpx_points(points, axies)
     
     # Save the figure directly to a file
-    figure.savefig(output_filename, format='png', bbox_inches='tight', pad_inches=0.1)
+    figure.savefig(output_path, format='png', bbox_inches='tight', pad_inches=0.1)
     plt.close(figure)  # Close the figure to free memory
     
-    logger.info(f"Image saved as {output_filename}")
+    logger.info(f"Image saved as {output_path}")
 
 def autoscale_resolution_from_bbox(bbox, target_height):
     """Compute resolution from bbox and target height using average latitude."""
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='Plot GPX paths to an image.')
     parser.add_argument('--source_folder', type=str, help='Path to the folder containing GPX files.')
-    parser.add_argument('--output', type=str, default='output.png', help='Output image filename.')
+    parser.add_argument('--output', type=str, default='output.png', help='Output image path.')
     parser.add_argument('--resolution', type=int, nargs=2, default=[512, 512], help='Output image resolution (width height).')
     parser.add_argument('--bbox', type=float, nargs=4, help='Bounding box (min_lon, max_lon, min_lat, max_lat).')
     parser.add_argument('--autoscale', type=int, help='Target image height in pixels. Width is calculated by latitude. Requires --bbox.')
