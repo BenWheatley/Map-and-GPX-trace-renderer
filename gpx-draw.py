@@ -168,7 +168,7 @@ if __name__ == "__main__":
     parser.add_argument('--geojson', nargs='+', action='append',
                         metavar=('PATH [FILL [LINE]]'),
                         help='Add a GeoJSON overlay with optional color (e.g. "#FF00FF88" (your shell may require the quotes)) for fill and line colours')
-    parser.add_argument('--loglevel', default='INFO', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+    parser.add_argument('--loglevel', default='WARNING', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                     help='Set the logging level')
     
     args = parser.parse_args()
