@@ -109,6 +109,31 @@ def configure_plot(resolution, bbox):
     return (figure, axies)
 
 def draw_geojson_backgrounds(geojson, axies):
+    def draw_geojson_backgrounds(geojson, axies):
+    """
+    Draw one or more GeoJSON files onto the given matplotlib axes with optional fill and line colors.
+
+    Parameters:
+        geojson (list of list): Each inner list must contain 1 to 3 elements:
+            - [0]: Path to the GeoJSON file.
+            - [1] (optional): Fill color as a hex string with alpha (e.g., "#FF000088").
+            - [2] (optional): Line color as a hex string with alpha (e.g., "#00000044").
+        axies (matplotlib.axes.Axes): The matplotlib axes to draw on.
+
+    Notes:
+        - The function supports multiple GeoJSON overlays.
+        - Color values should be strings interpretable by `matplotlib.colors.to_rgba`.
+        - Geometries supported include Polygon, MultiPolygon, and LineString.
+
+    Example:
+        draw_geojson_backgrounds(
+            geojson=[
+                ["buildings.geojson", "#FF000044", "#000000FF"],
+                ["rivers.geojson"]
+            ],
+            axies=ax
+        )
+    """
     for path_and_color in geojson:
         if len(path_and_color) == 1:
             draw_geojson(axies, path_and_color[0])
