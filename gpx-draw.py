@@ -119,7 +119,7 @@ def draw_geojson_backgrounds(geojson, axies):
 
 def draw_gpx_points(points, axies):
     lats, lons = zip(*[(p[0], p[1]) for p in points])
-    axies.plot(lons, lats, 'k-', linewidth=0.5, zorder=2)  # Draw path with black lines
+    axies.plot(lons, lats, 'k-', linewidth=0.5, zorder=2)
 
 def create_map(source_folder, output_path, resolution, bbox=None, max_speed=None, geojson=None):
     """Plot GPX paths from the folder onto an image."""
