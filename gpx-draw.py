@@ -61,7 +61,7 @@ def exceeds_speed_threshold(points, max_kph):
             return True
     return False
 
-def draw_geojson(ax, filepath, fill_color="#00000044", line_color="#00000088"):
+def draw_geojson(axies, filepath, fill_color="#00000044", line_color="#00000088"):
     """Load a GeoJSON file and draw its geometries on the given matplotlib axes."""
     with open(filepath, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -76,32 +76,55 @@ def draw_geojson(ax, filepath, fill_color="#00000044", line_color="#00000088"):
         
         if t == 'LineString':
             lons, lats = zip(*coords)
-            ax.plot(lons, lats, color=rgba(line_color), linewidth=1, zorder=1)
+            axies.plot(lons, lats, color=rgba(line_color), linewidth=1, zorder=1)
         
         elif t == 'Polygon':
             for ring in coords:
                 lons, lats = zip(*ring)
-                ax.add_patch(MplPolygon(list(zip(lons, lats)), closed=True, facecolor=rgba(fill_color), edgecolor=rgba(line_color), linewidth=0.5, zorder=1))
+                axies.add_patch(MplPolygon(list(zip(lons, lats)), closed=True, facecolor=rgba(fill_color), edgecolor=rgba(line_color), linewidth=0.5, zorder=1))
         
         elif t == 'MultiPolygon':
             for polygon in coords:
                 for ring in polygon:
                     lons, lats = zip(*ring)
-                    ax.add_patch(MplPolygon(list(zip(lons, lats)), closed=True, facecolor=rgba(fill_color), edgecolor=rgba(line_color), linewidth=0.5, zorder=1))
+                    axies.add_patch(MplPolygon(list(zip(lons, lats)), closed=True, facecolor=rgba(fill_color), edgecolor=rgba(line_color), linewidth=0.5, zorder=1))
 
-def plot_gpx_to_image(folder_path, output_filename='output.png', resolution=(512, 512), bbox=None, max_speed=None, geojson_overlays=None):
-    """Plot GPX paths from the folder onto an image."""
-    fig, ax = plt.subplots(figsize=(resolution[0] / 100, resolution[1] / 100), dpi=100)
-    ax.set_facecolor('white')
+def configure_plot(resolution, bbox):
+    """Setup figure, axies"""
+    figure, axies = plt.subplots(figsize=(resolution[0] / 100, resolution[1] / 100), dpi=100)
+    axies.set_facecolor('white')
     
-    if geojson_overlays:
-        for path_and_color in geojson_overlays:
-            if len(path_and_color) == 1:
-                draw_geojson(ax, path_and_color[0])
-            elif len(path_and_color) == 2:
-                draw_geojson(ax, path_and_color[0], path_and_color[1])
-            else:
-                draw_geojson(ax, path_and_color[0], path_and_color[1], path_and_color[2])
+    if bbox:
+        axies.set_xlim(bbox[0], bbox[1])
+        axies.set_ylim(bbox[2], bbox[3])
+        axies.add_patch(Rectangle((bbox[0], bbox[2]), bbox[1] - bbox[0], bbox[3] - bbox[2], 
+                               linewidth=1, edgecolor='black', facecolor='none'))
+    
+    axies.set_xlabel('Longitude')
+    axies.set_ylabel('Latitude')
+    
+    return (figure, axies)
+
+def draw_geojson_backgrounds(geojson, axies):
+    for path_and_color in geojson:
+        if len(path_and_color) == 1:
+            draw_geojson(axies, path_and_color[0])
+        elif len(path_and_color) == 2:
+            draw_geojson(axies, path_and_color[0], path_and_color[1])
+        else:
+            draw_geojson(axies, path_and_color[0], path_and_color[1], path_and_color[2])
+
+def draw_gpx_points(points, axies):
+    lats, lons = zip(*[(p[0], p[1]) for p in points])
+    axies.plot(lons, lats, 'k-', linewidth=0.5, zorder=2)  # Draw path with black lines
+
+def create_map(folder_path, output_filename, resolution, bbox=None, max_speed=None, geojson=None):
+    """Plot GPX paths from the folder onto an image."""
+    
+    figure, axies = configure_plot(resolution=resolution, bbox=bbox)
+    
+    if geojson:
+        draw_geojson_backgrounds(geojson, axies)
     
     for filename in os.listdir(folder_path):
         if filename.endswith('.gpx'):
@@ -110,21 +133,11 @@ def plot_gpx_to_image(folder_path, output_filename='output.png', resolution=(512
             if max_speed is not None and exceeds_speed_threshold(points, max_speed):
                 print(f"Skipping {filename} (exceeds {max_speed} km/h)")
                 continue
-            lats, lons = zip(*[(p[0], p[1]) for p in points])
-            ax.plot(lons, lats, 'k-', linewidth=0.5, zorder=2)  # Draw path with black lines
-    
-    if bbox:
-        ax.set_xlim(bbox[0], bbox[1])
-        ax.set_ylim(bbox[2], bbox[3])
-        ax.add_patch(Rectangle((bbox[0], bbox[2]), bbox[1] - bbox[0], bbox[3] - bbox[2], 
-                               linewidth=1, edgecolor='black', facecolor='none'))
-    
-    ax.set_xlabel('Longitude')
-    ax.set_ylabel('Latitude')
+            draw_gpx_points(points, axies)
     
     # Save the figure directly to a file
-    fig.savefig(output_filename, format='png', bbox_inches='tight', pad_inches=0.1)
-    plt.close(fig)  # Close the figure to free memory
+    figure.savefig(output_filename, format='png', bbox_inches='tight', pad_inches=0.1)
+    plt.close(figure)  # Close the figure to free memory
     
     print(f"Image saved as {output_filename}")
 
@@ -160,4 +173,4 @@ if __name__ == "__main__":
     elif args.resolution:
         resolution = tuple(args.resolution)
     
-    plot_gpx_to_image(args.source_folder, args.output, resolution, args.bbox, args.maxspeed, args.geojson)
+    create_map(args.source_folder, args.output, resolution, args.bbox, args.maxspeed, args.geojson)
