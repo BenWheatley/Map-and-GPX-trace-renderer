@@ -5,7 +5,7 @@ Python tool to render GPX traces and maps.
 
 <figure>
   <img src="berlin-brandenburg.png" alt="Screenshot of possible output, Berlin and Brandenburg">
-  <figcaption>Screenshot of possible output, Berlin and Brandenburg</figcaption>
+  <figcaption>Screenshot of possible output, Berlin and Brandenburg, using <code>./gpx-draw.py --autoscale 512 --bbox 12.96541 14.61085 52.265024 52.858841 --geojson ../../Docs/GeoJSON/de-federal-states-from-overpass-export.geojson  "#00500030" "#00500080" --source_folder ../../Docs/OutdoorActive\ GPX/ --output berlin-brandenburg.png --maxavgspeed 20</code></figcaption>
 </figure>
 
 ----
