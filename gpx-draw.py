@@ -109,7 +109,6 @@ def configure_plot(resolution, bbox):
     return (figure, axies)
 
 def draw_geojson_backgrounds(geojson, axies):
-    def draw_geojson_backgrounds(geojson, axies):
     """
     Draw one or more GeoJSON files onto the given matplotlib axes with optional fill and line colors.
 
