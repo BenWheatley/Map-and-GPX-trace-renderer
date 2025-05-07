@@ -54,7 +54,27 @@ def compute_speed_kph(lat1, lon1, lat2, lon2, dt_seconds):
     hours = dt_seconds / 3600.0
     return abs(distance_km / hours) # Care about speed, not velocity, so abs value
 
-def exceeds_speed_threshold(points, max_kph):
+def exceeds_speed_threshold(points, max_kph = None, max_avg_kph = None):
+    """
+    Return True if points exceed either:
+      - the per-segment speed threshold (max_kph), or
+      - the average-speed threshold (max_avg_kph).
+    """
+    
+    # 1) Segment threshold
+    if max_kph is not None:
+        if segment_exceeds_speed_threshold(points, max_kph):
+            return True
+    
+    # 2) Average threshold
+    if max_avg_kph is not None:
+        if exceeds_average_speed_threshold(points, max_avg_kph):
+            return True
+    
+    # Neither threshold exceeded
+    return False
+
+def segment_exceeds_speed_threshold(points, max_kph):
     """Check if any segment exceeds max speed in km/h."""
     for i in range(1, len(points)):
         lat1, lon1, t1 = points[i - 1]
@@ -68,6 +88,39 @@ def exceeds_speed_threshold(points, max_kph):
         if speed_kph > max_kph:
             return True
     return False
+
+def exceeds_average_speed_threshold(points, max_kph):
+    """
+    Check if the **average** speed over the entire track exceeds max_kph.
+    
+    Uses compute_speed_kph() to get each segment’s speed, then weights it
+    by the segment duration to compute an overall average.
+    
+    Returns:
+        True if (total_distance / total_time) > max_kph, False otherwise.
+    """
+    total_time_h = 0.0
+    total_distance_km = 0.0
+    
+    for (lat1, lon1, t1), (lat2, lon2, t2) in zip(points, points[1:]):
+        if t1 is None or t2 is None:
+            continue
+        dt_seconds = (t2 - t1).total_seconds()
+        if dt_seconds <= 0:
+            continue
+        
+        # compute_speed_kph gives km/h; convert segment time to hours
+        speed_kph = compute_speed_kph(lat1, lon1, lat2, lon2, dt_seconds)
+        segment_hours = dt_seconds / 3600.0
+        total_time_h += segment_hours
+        total_distance_km += speed_kph * segment_hours
+    
+    if total_time_h == 0:
+        return False
+    
+    average_speed_kph = total_distance_km / total_time_h
+    return average_speed_kph > max_kph
+
 
 def draw_geojson(axies, filepath, fill_color="#00000044", line_color="#00000088"):
     """Load a GeoJSON file and draw its geometries on the given matplotlib axes."""
@@ -150,7 +203,7 @@ def draw_gpx_points(points, axies):
     lats, lons = zip(*[(p[0], p[1]) for p in points])
     axies.plot(lons, lats, 'k-', linewidth=0.5, zorder=2)
 
-def create_map(source_folder, output_path, resolution, bbox=None, max_speed=None, geojson=None):
+def create_map(source_folder, output_path, resolution, bbox=None, max_speed=None, max_avg_speed=None, geojson=None):
     """Plot GPX paths from the folder onto an image."""
     
     figure, axies = configure_plot(resolution=resolution, bbox=bbox)
@@ -165,8 +218,8 @@ def create_map(source_folder, output_path, resolution, bbox=None, max_speed=None
             if not points:
                 logger.warning(f"No points to draw for: {filename}")
                 continue
-            if max_speed is not None and exceeds_speed_threshold(points, max_speed):
-                logger.warning(f"Skipping {filename} (exceeds {max_speed} km/h)")
+            if ((max_speed is not None) or (max_avg_speed is not None)) and exceeds_speed_threshold(points, max_speed, max_avg_speed):
+                logger.warning(f"Skipping {filename} (exceeds either max_speed ({max_speed} km/h) or max_avg_speed ({max_avg_speed} km/h))")
                 continue
             draw_gpx_points(points, axies)
     
@@ -196,7 +249,8 @@ if __name__ == "__main__":
     parser.add_argument('--resolution', type=int, nargs=2, default=[512, 512], help='Output image resolution (width height).')
     parser.add_argument('--bbox', type=float, nargs=4, help='Bounding box (min_lon, max_lon, min_lat, max_lat).')
     parser.add_argument('--autoscale', type=int, help='Target image height in pixels. Width is calculated by latitude. Requires --bbox.')
-    parser.add_argument('--maxspeed', type=float, help='Exclude GPX tracks that exceed this speed (km/h).')
+    parser.add_argument('--maxspeed', type=float, help='Exclude GPX tracks that exceed this speed at any point (km/h).')
+    parser.add_argument('--maxavgspeed', type=float, help='Exclude GPX tracks that exceed this speed on average (km/h).')
     parser.add_argument('--geojson', nargs='+', action='append',
                         metavar=('PATH [FILL [LINE]]'),
                         help='Add a GeoJSON overlay with optional color (e.g. "#FF00FF88" (your shell may require the quotes)) for fill and line colours')
@@ -212,4 +266,4 @@ if __name__ == "__main__":
     elif args.resolution:
         resolution = tuple(args.resolution)
     
-    create_map(args.source_folder, args.output, resolution, args.bbox, args.maxspeed, args.geojson)
+    create_map(args.source_folder, args.output, resolution, args.bbox, args.maxspeed, args.maxavgspeed, args.geojson)
