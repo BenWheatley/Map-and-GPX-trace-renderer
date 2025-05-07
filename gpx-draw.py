@@ -28,7 +28,10 @@ def parse_gpx(file_path):
         time_elem = trkpt.find('gpx:time', ns)
         if time_elem is not None:
             time = datetime.fromisoformat(time_elem.text.replace("Z", "+00:00"))
-            points.append((lat, lon, time))
+        else:
+            time = None
+        points.append((lat, lon, time))
+    
     return points
 
 def haversine(lat1, lon1, lat2, lon2):
@@ -56,6 +59,8 @@ def exceeds_speed_threshold(points, max_kph):
     for i in range(1, len(points)):
         lat1, lon1, t1 = points[i - 1]
         lat2, lon2, t2 = points[i]
+        if t1 == None or t2 == None:
+            continue
         dt_seconds = (t2 - t1).total_seconds()
         if dt_seconds == 0:
             continue
@@ -157,6 +162,9 @@ def create_map(source_folder, output_path, resolution, bbox=None, max_speed=None
         if filename.endswith('.gpx'):
             file_path = os.path.join(source_folder, filename)
             points = parse_gpx(file_path)
+            if not points:
+                logger.warning(f"No points to draw for: {filename}")
+                continue
             if max_speed is not None and exceeds_speed_threshold(points, max_speed):
                 logger.warning(f"Skipping {filename} (exceeds {max_speed} km/h)")
                 continue
